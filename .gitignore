@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+web/.next/
+web/out/
+
+# Env
+.env
+.env.local
+.env.*.local
+web/.env.local
+supabase/.env.local
+ios/MomMeds/Config.local.xcconfig
+
+# Supabase
+supabase/.temp/
+supabase/.branches/
+
+# iOS / Xcode
+ios/**/DerivedData/
+ios/**/*.xcuserstate
+ios/**/xcuserdata/
+ios/**/.DS_Store
+ios/**/build/
+*.ipa
+*.dSYM.zip
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage/
+test-results/
