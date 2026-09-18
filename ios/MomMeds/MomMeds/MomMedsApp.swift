@@ -14,6 +14,7 @@ struct MomMedsApp: App {
 
 struct RootView: View {
     @EnvironmentObject private var appState: AppState
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Group {
@@ -25,6 +26,12 @@ struct RootView: View {
         }
         .task {
             await appState.bootstrap()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active, appState.isPaired else { return }
+            Task {
+                await CheckInReminderManager.shared.refreshReminderSchedule()
+            }
         }
     }
 }

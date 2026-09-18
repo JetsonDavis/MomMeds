@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var eventQueue = EventQueue.shared
+    @StateObject private var checkInReminder = CheckInReminderManager.shared
     @State private var showPainSlider = false
     @State private var showSettings = false
 
@@ -80,6 +81,7 @@ struct HomeView: View {
             Task {
                 await appState.refreshFromServer()
                 await eventQueue.flush()
+                await checkInReminder.refreshReminderSchedule()
             }
         }
     }
@@ -100,6 +102,12 @@ struct HomeView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text("Last Check In Time: \(checkInReminder.lastCheckInDisplayText)")
+                .font(.subheadline)
+                .foregroundStyle(checkInReminder.isOverdue ? .orange : .secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityLabel("Last check in time \(checkInReminder.lastCheckInDisplayText)")
 
             if eventQueue.pendingCount > 0 {
                 Text("\(eventQueue.pendingCount) events waiting to sync")

@@ -30,6 +30,9 @@ final class AppState: ObservableObject {
         MedicationCache.save(patientName: patientName, medications: medications)
         isPaired = true
         syncStatus = "Paired"
+        Task {
+            await CheckInReminderManager.shared.refreshReminderSchedule()
+        }
     }
 
     func unpair() {
@@ -39,6 +42,7 @@ final class AppState: ObservableObject {
         patientName = ""
         medications = []
         syncStatus = "Unpaired"
+        CheckInReminderManager.shared.clearCheckIn()
     }
 
     func refreshFromServer() async {
@@ -66,6 +70,7 @@ final class AppState: ObservableObject {
             recordedAt: Date()
         )
         EventQueue.shared.enqueue(event)
+        CheckInReminderManager.shared.markCheckIn(at: event.recordedAt)
         confirmationMessage = type == .medTaken
             ? "Recorded: took \(medication?.name ?? "medication")"
             : "Recorded"
