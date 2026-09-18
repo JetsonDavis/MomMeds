@@ -22,6 +22,7 @@ import type { BucketReport, EventType, EventWithMedication } from "@/lib/types";
 type Props = {
   patientId: string;
   timezone: string;
+  refreshNonce?: number;
 };
 
 type Granularity = "hourly" | "daily";
@@ -42,7 +43,7 @@ function eventDetail(event: EventWithMedication) {
   return "—";
 }
 
-export function ChartsView({ patientId, timezone }: Props) {
+export function ChartsView({ patientId, timezone, refreshNonce = 0 }: Props) {
   const [granularity, setGranularity] = useState<Granularity>("hourly");
   const [fromDate, setFromDate] = useState(format(subDays(new Date(), 7), "yyyy-MM-dd"));
   const [toDate, setToDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -89,7 +90,7 @@ export function ChartsView({ patientId, timezone }: Props) {
     }
 
     load();
-  }, [patientId, granularity, fromDate, toDate]);
+  }, [patientId, granularity, fromDate, toDate, refreshNonce]);
 
   const barChartData = useMemo(
     () =>

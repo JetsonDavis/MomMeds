@@ -1,50 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { formatDateTime, formatEventLabel } from "@/lib/utils";
 import type { EventWithMedication } from "@/lib/types";
 
 type Props = {
-  patientId: string;
+  events: EventWithMedication[];
   timezone: string;
-  initialEvents: EventWithMedication[];
 };
 
-export function RecentEvents({ patientId, timezone, initialEvents }: Props) {
-  const [events, setEvents] = useState(initialEvents);
-
-  useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
-      .channel(`events:${patientId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "events",
-          filter: `patient_id=eq.${patientId}`,
-        },
-        async () => {
-          const { data } = await supabase
-            .from("events")
-            .select("*, medications(name)")
-            .eq("patient_id", patientId)
-            .order("recorded_at", { ascending: false })
-            .limit(20);
-          if (data) {
-            setEvents(data as EventWithMedication[]);
-          }
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [patientId]);
-
+export function RecentEvents({ events, timezone }: Props) {
   return (
     <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6">
       <h2 className="text-lg font-semibold">Recent events</h2>

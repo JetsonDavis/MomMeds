@@ -13,6 +13,16 @@ export function formatDateTime(value: string, timezone?: string) {
   return format(date, "MMM d, yyyy h:mm a");
 }
 
+export function isEventToday(recordedAt: string, timezone: string) {
+  const dayFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return dayFormatter.format(new Date(recordedAt)) === dayFormatter.format(new Date());
+}
+
 export function formatEventLabel(type: EventType, painLevel?: number | null) {
   if (type === "pain" && painLevel != null) {
     return `${EVENT_LABELS[type]} (${painLevel}/10)`;

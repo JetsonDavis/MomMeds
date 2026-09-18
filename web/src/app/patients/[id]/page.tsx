@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { startOfDay, endOfDay } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
-import { SummaryCards } from "@/components/SummaryCards";
-import { RecentEvents } from "@/components/RecentEvents";
+import { PatientLiveProvider } from "@/components/PatientLiveProvider";
+import { PatientRecentEvents } from "@/components/PatientRecentEvents";
+import { PatientTodaySummary } from "@/components/PatientTodaySummary";
 import { MedicationEditor } from "@/components/MedicationEditor";
 import { DevicesPanel } from "@/components/DevicesPanel";
 import type { DevicePublic, Event, EventWithMedication, Medication, Patient } from "@/lib/types";
@@ -66,46 +67,46 @@ export default async function PatientDetailPage({ params }: Props) {
   ]);
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Link href="/patients" className="text-sm text-[var(--primary)]">
-            ← All patients
+    <PatientLiveProvider
+      patientId={id}
+      timezone={typedPatient.timezone}
+      initialTodayEvents={(todayEvents ?? []) as Event[]}
+      initialRecentEvents={(recentEvents ?? []) as EventWithMedication[]}
+    >
+      <div className="space-y-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <Link href="/patients" className="text-sm text-[var(--primary)]">
+              ← All patients
+            </Link>
+            <h1 className="mt-2 text-3xl font-semibold">{typedPatient.display_name}</h1>
+            <p className="mt-1 text-[var(--muted)]">
+              {typedPatient.phone ?? "No phone on file"} · {typedPatient.timezone}
+            </p>
+          </div>
+          <Link
+            href={`/patients/${id}/charts`}
+            className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white"
+          >
+            View charts
           </Link>
-          <h1 className="mt-2 text-3xl font-semibold">{typedPatient.display_name}</h1>
-          <p className="mt-1 text-[var(--muted)]">
-            {typedPatient.phone ?? "No phone on file"} · {typedPatient.timezone}
-          </p>
         </div>
-        <Link
-          href={`/patients/${id}/charts`}
-          className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white"
-        >
-          View charts
-        </Link>
-      </div>
 
-      <div>
-        <h2 className="mb-4 text-lg font-semibold">Today&apos;s summary</h2>
-        <SummaryCards events={(todayEvents ?? []) as Event[]} />
-      </div>
+        <PatientTodaySummary />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <RecentEvents
+        <div className="grid gap-6 lg:grid-cols-2">
+          <PatientRecentEvents timezone={typedPatient.timezone} />
+          <MedicationEditor
+            patientId={id}
+            medications={(medications ?? []) as Medication[]}
+          />
+        </div>
+
+        <DevicesPanel
           patientId={id}
-          timezone={typedPatient.timezone}
-          initialEvents={(recentEvents ?? []) as EventWithMedication[]}
-        />
-        <MedicationEditor
-          patientId={id}
-          medications={(medications ?? []) as Medication[]}
+          devices={(devices ?? []) as DevicePublic[]}
         />
       </div>
-
-      <DevicesPanel
-        patientId={id}
-        devices={(devices ?? []) as DevicePublic[]}
-      />
-    </div>
+    </PatientLiveProvider>
   );
 }
