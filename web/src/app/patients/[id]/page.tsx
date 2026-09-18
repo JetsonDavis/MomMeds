@@ -7,7 +7,15 @@ import { PatientRecentEvents } from "@/components/PatientRecentEvents";
 import { PatientTodaySummary } from "@/components/PatientTodaySummary";
 import { MedicationEditor } from "@/components/MedicationEditor";
 import { DevicesPanel } from "@/components/DevicesPanel";
-import type { DevicePublic, Event, EventWithMedication, Medication, Patient } from "@/lib/types";
+import { NotificationPanel } from "@/components/NotificationPanel";
+import type {
+  CaregiverMessage,
+  DevicePublic,
+  Event,
+  EventWithMedication,
+  Medication,
+  Patient,
+} from "@/lib/types";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -40,6 +48,7 @@ export default async function PatientDetailPage({ params }: Props) {
     { data: recentEvents },
     { data: medications },
     { data: devices },
+    { data: caregiverMessages },
   ] = await Promise.all([
     supabase
       .from("events")
@@ -64,6 +73,12 @@ export default async function PatientDetailPage({ params }: Props) {
       .select("*")
       .eq("patient_id", id)
       .order("paired_at", { ascending: false }),
+    supabase
+      .from("caregiver_messages")
+      .select("*")
+      .eq("patient_id", id)
+      .order("sent_at", { ascending: false })
+      .limit(20),
   ]);
 
   return (
@@ -101,6 +116,12 @@ export default async function PatientDetailPage({ params }: Props) {
             medications={(medications ?? []) as Medication[]}
           />
         </div>
+
+        <NotificationPanel
+          patient={typedPatient}
+          timezone={typedPatient.timezone}
+          initialMessages={(caregiverMessages ?? []) as CaregiverMessage[]}
+        />
 
         <DevicesPanel
           patientId={id}

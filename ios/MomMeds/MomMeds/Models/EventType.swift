@@ -46,6 +46,30 @@ struct PatientInfo: Codable, Equatable {
     }
 }
 
+struct NotificationSettings: Codable, Equatable {
+    let enabled: Bool
+    let reminderIntervalMinutes: Int
+
+    static let `default` = NotificationSettings(enabled: true, reminderIntervalMinutes: 120)
+
+    enum CodingKeys: String, CodingKey {
+        case enabled
+        case reminderIntervalMinutes
+    }
+}
+
+struct CaregiverMessage: Codable, Equatable, Identifiable {
+    let id: UUID
+    let message: String
+    let sentAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case message
+        case sentAt
+    }
+}
+
 struct PendingEvent: Codable, Identifiable, Equatable {
     let id: UUID
     let type: EventType

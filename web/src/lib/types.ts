@@ -7,7 +7,19 @@ export type Patient = {
   timezone: string;
   notes: string | null;
   active: boolean;
+  notifications_enabled: boolean;
+  reminder_interval_minutes: number;
   created_at: string;
+};
+
+export type CaregiverMessage = {
+  id: string;
+  patient_id: string;
+  message: string;
+  sent_by: string | null;
+  sent_at: string;
+  delivered_at: string | null;
+  delivered_device_id: string | null;
 };
 
 export type Medication = {

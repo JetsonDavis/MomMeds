@@ -24,11 +24,31 @@ struct PairResponse: Decodable {
     let deviceToken: String
     let patient: PatientInfo
     let medications: [Medication]
+    let notifications: NotificationSettings?
+    let messages: [CaregiverMessage]?
+
+    var resolvedNotifications: NotificationSettings {
+        notifications ?? .default
+    }
+
+    var pendingMessages: [CaregiverMessage] {
+        messages ?? []
+    }
 }
 
 struct SyncResponse: Decodable {
     let patient: PatientInfo
     let medications: [Medication]
+    let notifications: NotificationSettings?
+    let messages: [CaregiverMessage]?
+
+    var resolvedNotifications: NotificationSettings {
+        notifications ?? .default
+    }
+
+    var pendingMessages: [CaregiverMessage] {
+        messages ?? []
+    }
 }
 
 struct EventsPayload: Encodable {

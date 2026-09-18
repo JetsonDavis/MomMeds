@@ -13,6 +13,23 @@ struct HomeView: View {
                 VStack(spacing: 20) {
                     header
 
+                    if let caregiverMessage = appState.caregiverBannerMessage {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Message from your caregiver")
+                                .font(.headline)
+                            Text(caregiverMessage)
+                                .font(.body)
+                            Button("Dismiss") {
+                                appState.dismissCaregiverBanner()
+                            }
+                            .font(.subheadline.bold())
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                        .background(Color.blue.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                    }
+
                     Button {
                         appState.record(type: .feelGreat)
                     } label: {

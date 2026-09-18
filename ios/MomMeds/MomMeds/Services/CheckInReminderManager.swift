@@ -6,14 +6,20 @@ final class CheckInReminderManager: ObservableObject {
     static let shared = CheckInReminderManager()
 
     @Published private(set) var lastCheckInDate: Date?
+    @Published private(set) var notificationsEnabled = true
+    @Published private(set) var reminderIntervalMinutes = 120
 
     private let lastCheckInKey = "mommeds.lastCheckIn"
     private let overdueNotifiedForKey = "mommeds.overdueNotifiedFor"
     private let reminderIdentifier = "mommeds.checkInReminder"
-    private let checkInInterval: TimeInterval = 2 * 60 * 60
+    private let caregiverMessagePrefix = "mommeds.caregiver."
 
     private init() {
         lastCheckInDate = UserDefaults.standard.object(forKey: lastCheckInKey) as? Date
+    }
+
+    private var checkInInterval: TimeInterval {
+        TimeInterval(reminderIntervalMinutes * 60)
     }
 
     var lastCheckInDisplayText: String {
@@ -24,8 +30,29 @@ final class CheckInReminderManager: ObservableObject {
     }
 
     var isOverdue: Bool {
-        guard let lastCheckInDate else { return false }
+        guard notificationsEnabled, let lastCheckInDate else { return false }
         return Date().timeIntervalSince(lastCheckInDate) >= checkInInterval
+    }
+
+    var reminderIntervalDisplayText: String {
+        if reminderIntervalMinutes < 60 {
+            return "Every \(reminderIntervalMinutes) minutes"
+        }
+        if reminderIntervalMinutes == 60 {
+            return "Every hour"
+        }
+        if reminderIntervalMinutes % 60 == 0 {
+            return "Every \(reminderIntervalMinutes / 60) hours"
+        }
+        return "Every \(reminderIntervalMinutes) minutes"
+    }
+
+    func applySettings(_ settings: NotificationSettings) {
+        notificationsEnabled = settings.enabled
+        reminderIntervalMinutes = max(15, settings.reminderIntervalMinutes)
+        Task {
+            await refreshReminderSchedule()
+        }
     }
 
     func requestAuthorizationIfNeeded() async {
@@ -59,10 +86,38 @@ final class CheckInReminderManager: ObservableObject {
         await rescheduleReminder()
     }
 
+    func deliverCaregiverMessages(_ messages: [CaregiverMessage]) async {
+        guard !messages.isEmpty else { return }
+
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+        guard settings.authorizationStatus == .authorized
+            || settings.authorizationStatus == .provisional
+            || settings.authorizationStatus == .ephemeral else {
+            return
+        }
+
+        for message in messages {
+            let content = UNMutableNotificationContent()
+            content.title = "Message from your caregiver"
+            content.body = message.message
+            content.sound = .default
+
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+            let request = UNNotificationRequest(
+                identifier: "\(caregiverMessagePrefix)\(message.id.uuidString)",
+                content: content,
+                trigger: trigger
+            )
+            try? await center.add(request)
+        }
+    }
+
     private func rescheduleReminder() async {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [reminderIdentifier])
 
+        guard notificationsEnabled else { return }
         guard let lastCheckInDate else { return }
 
         let settings = await center.notificationSettings()
@@ -91,6 +146,7 @@ final class CheckInReminderManager: ObservableObject {
     }
 
     private func deliverOverdueReminderIfNeeded() async {
+        guard notificationsEnabled else { return }
         guard let lastCheckInDate else { return }
 
         let notifiedFor = UserDefaults.standard.object(forKey: overdueNotifiedForKey) as? Date

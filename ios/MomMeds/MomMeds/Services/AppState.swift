@@ -11,6 +11,7 @@ final class AppState: ObservableObject {
     @Published var showConfirmation = false
     @Published var confirmationMessage = "Recorded"
     @Published var syncStatus = "Ready"
+    @Published var caregiverBannerMessage: String?
 
     private var settingsTapCount = 0
 
@@ -25,14 +26,14 @@ final class AppState: ObservableObject {
     func pair(with code: String) async throws {
         let response = try await APIClient.shared.pair(code: code)
         try KeychainStore.saveDeviceToken(response.deviceToken)
-        patientName = response.patient.displayName
-        medications = response.medications.sorted { $0.sortOrder < $1.sortOrder }
-        MedicationCache.save(patientName: patientName, medications: medications)
+        applySyncPayload(
+            patient: response.patient,
+            medications: response.medications,
+            notifications: response.resolvedNotifications,
+            messages: response.pendingMessages
+        )
         isPaired = true
         syncStatus = "Paired"
-        Task {
-            await CheckInReminderManager.shared.refreshReminderSchedule()
-        }
     }
 
     func unpair() {
@@ -41,8 +42,10 @@ final class AppState: ObservableObject {
         isPaired = false
         patientName = ""
         medications = []
+        caregiverBannerMessage = nil
         syncStatus = "Unpaired"
         CheckInReminderManager.shared.clearCheckIn()
+        CheckInReminderManager.shared.applySettings(.default)
     }
 
     func refreshFromServer() async {
@@ -50,15 +53,22 @@ final class AppState: ObservableObject {
 
         do {
             let response = try await APIClient.shared.sync(deviceToken: token)
-            patientName = response.patient.displayName
-            medications = response.medications.sorted { $0.sortOrder < $1.sortOrder }
-            MedicationCache.save(patientName: patientName, medications: medications)
+            applySyncPayload(
+                patient: response.patient,
+                medications: response.medications,
+                notifications: response.resolvedNotifications,
+                messages: response.pendingMessages
+            )
             syncStatus = "Synced"
         } catch APIClientError.unauthorized {
             unpair()
         } catch {
             syncStatus = "Offline — using cached data"
         }
+    }
+
+    func dismissCaregiverBanner() {
+        caregiverBannerMessage = nil
     }
 
     func record(type: EventType, painLevel: Int? = nil, medication: Medication? = nil) {
@@ -87,5 +97,25 @@ final class AppState: ObservableObject {
             return true
         }
         return false
+    }
+
+    private func applySyncPayload(
+        patient: PatientInfo,
+        medications: [Medication],
+        notifications: NotificationSettings,
+        messages: [CaregiverMessage]
+    ) {
+        patientName = patient.displayName
+        self.medications = medications.sorted { $0.sortOrder < $1.sortOrder }
+        MedicationCache.save(patientName: patientName, medications: self.medications)
+        CheckInReminderManager.shared.applySettings(notifications)
+
+        if let latestMessage = messages.last?.message {
+            caregiverBannerMessage = latestMessage
+        }
+
+        Task {
+            await CheckInReminderManager.shared.deliverCaregiverMessages(messages)
+        }
     }
 }

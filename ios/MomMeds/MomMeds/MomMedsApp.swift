@@ -30,7 +30,17 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active, appState.isPaired else { return }
             Task {
-                await CheckInReminderManager.shared.refreshReminderSchedule()
+                await appState.refreshFromServer()
+                await EventQueue.shared.flush()
+            }
+        }
+        .task(id: appState.isPaired) {
+            guard appState.isPaired else { return }
+
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(90))
+                if Task.isCancelled { return }
+                await appState.refreshFromServer()
             }
         }
     }

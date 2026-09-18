@@ -1,4 +1,5 @@
 import { getDeviceToken, getServiceClient, lookupDevice } from "../_shared/auth.ts";
+import { buildDevicePayload, patientSelectFields } from "../_shared/device_payload.ts";
 import { handleOptions, jsonResponse } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
@@ -30,7 +31,7 @@ Deno.serve(async (req) => {
 
   const { data: patient, error: patientError } = await supabase
     .from("patients")
-    .select("id, display_name, timezone, active")
+    .select(patientSelectFields)
     .eq("id", device.patient_id)
     .single();
 
@@ -43,29 +44,11 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Patient is inactive" }, 403);
   }
 
-  const { data: medications, error: medsError } = await supabase
-    .from("medications")
-    .select("id, name, dose, sort_order")
-    .eq("patient_id", device.patient_id)
-    .eq("active", true)
-    .order("sort_order", { ascending: true });
-
-  if (medsError) {
-    console.error(medsError);
-    return jsonResponse({ error: "Failed to load medications" }, 500);
+  try {
+    const payload = await buildDevicePayload(supabase, patient, device.id);
+    return jsonResponse(payload);
+  } catch (error) {
+    console.error(error);
+    return jsonResponse({ error: "Failed to load device sync payload" }, 500);
   }
-
-  return jsonResponse({
-    patient: {
-      id: patient.id,
-      displayName: patient.display_name,
-      timezone: patient.timezone,
-    },
-    medications: (medications ?? []).map((med) => ({
-      id: med.id,
-      name: med.name,
-      dose: med.dose,
-      sortOrder: med.sort_order,
-    })),
-  });
 });
